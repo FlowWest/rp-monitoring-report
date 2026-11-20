@@ -1,0 +1,285 @@
+---
+title: "Sacramento Floodplain Monitoring Report: Rancho Caleta, Colusa Bend, R&J Ranch"
+format: html
+editor: visual
+execute:
+  echo: false
+  message: false
+  warning: false # optional: also hides warnings
+---
+
+```{r}
+library(tidyverse)
+library(ggnewscale)
+library(readxl)
+library(janitor)
+library(viridis)
+library(here)
+```
+## Executive Summary
+
+## Background
+
+- Rancho Caleta
+- Colusa Bend
+- RJ Ranch
+
+## Methods
+
+### Sites
+
+Include photos and map here
+
+
+### Monitoring Surveys
+
+Pre-restoration ARIS surveys occurred in April (Rancho Caleta)
+
+ARIS Surveys were conducted: April 8, April 13, April 28 for Rancho Caleta;
+
+Surveys generally occurred from 7:00 or 8:00 until 15:00.
+
+#### ARIS Deployment
+
+- ARIS surveys were conducted using an ARIS XX ().
+
+#### Data Analysis
+
+## Results
+
+### Water Quality
+
+```{r echo = FALSE}
+aris_data <- read_excel("data-raw/Sacramento River ARIS Data_shared.xlsx",skip = 1) |> clean_names() |> 
+  mutate(date = ymd(date))|> 
+  filter(site %in% c("Rancho Caleta"))
+
+hourly_flow_colusa <- read_csv(here("data-raw", "hourly_flow_colusa.csv"))
+hourly_flow_HMC <- read_csv(here("data-raw", "hourly_discharge_HMC.csv"))
+hourly_flow <- bind_rows(hourly_flow_colusa, hourly_flow_HMC)
+
+temp_rdb <- read_csv(here("data-raw", "temp_rdb.csv"))
+temp_wlk <- read_csv(here("data-raw", "temp_wlk.csv"))
+daily_temp <- bind_rows(temp_rdb, temp_wlk) |> 
+  mutate(temp_c = (temp-32) *5/9)
+turb_rdb <- read_csv(here("data-raw", "hourly_turb_rdb.csv"))
+```
+
+```{r}
+# Field days/ discrete values
+dates <- aris_data |> 
+  mutate(temp_u = as.numeric(daily_average_temperature_upstream_f)) |> 
+  mutate(temp_d = as.numeric(daily_average_termperature_downstream_c)) |>  
+  mutate(turbidity = as.numeric(ntu)) |> 
+  select(date, site, flow_cfs, temp_u, temp_d, turbidity)  |> 
+  distinct() 
+```
+
+#### Hydrologic Data (Flow)
+
+These plots will more likely turn into a facet plot of 3 rows OR one plot per report with the appropriate flow station identified for each restoration site. Might also get rid of the points for the "before" if these are just from gauges and not actually collected at the site. Could just draw the full vertical line in that case for dates sampled. Same applies to WQ plots.
+
+Do we have flow thresholds we care about here? E.g. goals for restoration project?
+
+```{r}
+#| label: fig-flow-data
+#| fig-cap: "Hourly Continuous Flow Data and 'Discrete' Flow Data associated with dates of sample. Hamilton City - HMC (upstream) and USGS 11389500 - COL (downstream)"
+dates <- aris_data |> 
+  mutate(temp_u = as.numeric(daily_average_temperature_upstream_f)) |> 
+  mutate(temp_d = as.numeric(daily_average_termperature_downstream_c)) |>  
+  mutate(turbidity = as.numeric(ntu)) |> 
+  select(date, site, flow_cfs, temp_u, temp_d, turbidity)  |> 
+  distinct()
+
+ggplot() + 
+  geom_line(data = hourly_flow, aes(datetime, flow_cfs, color = location)) +
+  scale_color_manual(values = c("black", "gray60"))+
+  new_scale_color() + 
+  geom_segment(data = dates, aes(x = date, y = -Inf, xend = date, yend = flow_cfs, color = site), linetype = "dashed", linewidth = 0.8) + 
+  geom_point(data = dates, aes(date, flow_cfs, color = site)) + 
+  labs(title = "Flow at Colusa")+
+  scale_color_viridis(discrete = T, option = "turbo") + 
+  theme_bw()+
+  theme(legend.position = "top")
+```
+
+#### Can we do anything with flow/habitat? E.g. how much habitat is available 
+
+#### Water Temperature
+
+```{r}
+#| label: fig-temperature-data
+#| fig-cap: "Daily Water Temperature (C) Data Data and 'Discrete' Temperature Data associated with dates of sample. Red Bluff Diversion Dam - RDB (upstream) and Wilkins Slough - WLK (downstream)"
+ggplot() +
+  geom_line(data = daily_temp, aes(x = datetime, y = temp_c, color = location)) +
+  scale_color_manual(values = c("black", "gray60"))+
+  new_scale_color() + 
+  geom_segment(data = dates, aes(x = date, y = -Inf, xend = date, yend = temp_u, color = site), linetype = "dashed", linewidth = 0.8) + 
+  geom_segment(data = dates, aes(x = date, y = -Inf, xend = date, yend = temp_d, color = site), linetype = "dashed", linewidth = 0.8) + 
+  geom_point(data = dates, aes(date, temp_u, color = site)) + 
+  geom_point(data = dates, aes(date, temp_d, color = site)) + 
+  labs(title = "Water Temperature Data") + 
+  scale_color_viridis(discrete = T, option = "turbo") + 
+  theme_bw()+
+  theme(legend.position = "top")
+```
+
+#### Turbidity - Still looking for more downstream data
+
+```{r}
+#| label: fig-turbidity-data
+#| fig-cap: "Daily Turbidity (NTU) Data and 'Discrete' Turbidity Data associated with dates of sample. Red Bluff Diversion Dam - RDB (upstream)"
+ggplot() + 
+  geom_line(data = turb_rdb, aes(datetime, turb)) +
+  scale_color_manual(values = c("black", "gray60"))+
+  new_scale_color() + 
+  geom_segment(data = dates, aes(x = date, y = -Inf, xend = date, yend = turbidity, color = site), linetype = "dashed", linewidth = 0.8) + 
+  geom_point(data = dates, aes(date, turbidity, color = site)) + 
+  labs(title = "Turbidity at Red Bluff DD")+
+  scale_color_viridis(discrete = T, option = "turbo") + 
+  theme_bw()+
+  theme(legend.position = "top")
+```
+
+### ARIS
+
+#### ARIS passage estimates
+
+Not sure why we care about the hourly counts
+
+```{r}
+#| label: fig-aris-hourly-counts
+#| fig-cap: "Average Hourly Passage in April (Rancho Caleta). Three days of sampling were conducted for each site."
+
+aris_hourly_counts <- aris_data |> 
+  group_by(site, date, hour, subsample_time_start) |> 
+  reframe(subsample_total = sum(count)) |> 
+  group_by(site, date, hour) |> 
+  reframe(avg_count = mean(subsample_total, na.rm = TRUE),
+            n = n()) |> 
+  mutate(hourly_count = avg_count / (n*10) * 60 )
+
+aris_daily_counts <- aris_hourly_counts |> 
+  group_by(site, date) |> 
+  reframe(daily_count = mean(hourly_count))
+
+# aris_weekly_counts <- aris_daily_counts |> 
+#   mutate(week = lubridate::week(date)) |> 
+#   group_by(week, site) |> 
+#   reframe(total_count = sum(daily_count)) 
+
+aris_hourly_counts |> 
+  group_by(site, hour) |> 
+  reframe(avg_hourly = mean(hourly_count)) |> 
+  ggplot() +
+  geom_point(aes(hour, avg_hourly, color = site)) + 
+  geom_line(aes(hour, avg_hourly, color = site)) + 
+  # facet_wrap(~site, nrow = 3)+
+  scale_color_viridis(discrete = TRUE, option = "turbo")+
+  labs(title = "Hourly Fish Passage Before Restoration", y = "Hourly Fish Passage")+
+  theme_bw() +
+  theme(legend.position = "top")
+  
+```
+
+```{r}
+#| label: fig-aris-daily-passage
+#| fig-cap: "Average Daily Passage in April (Rancho Caleta). Three days of sampling were conducted for each site."
+# This plot will probably look like one Before and one After per site with standard deviation once we have "After" data. 
+
+ggplot(aris_daily_counts) + 
+  geom_col(aes(date,daily_count, fill = site)) + 
+  facet_wrap(~site, nrow = 3)+
+  scale_fill_viridis(discrete = TRUE, option = "turbo")+
+  labs(title = "ARIS Daily Passage Estimate", y = "Daily Fish Passage") + 
+  theme_bw() +
+  theme(legend.position = "top",
+        axis.title.x = element_blank())
+```
+
+Feather River report also included a table of this data and screw trap data for context, if we want that, to show whether more fish at different times. Could use Red Bluff trap data? 
+
+#### Size
+
+Do I need to expand for total fish?
+
+```{r}
+#| label: fig-aris-size-distribution
+#| fig-cap: "Size Distribution of Fish"
+size_data <- aris_data |> 
+  select(date, site, count, size_estimate = size_estimate_in_50mm_increments_slot_sizes_if_between_50_100_then_recorded_as_50_if_between_100_150_then_recorded_as_100_etc) |> 
+  uncount(weight = count)
+
+size_data |> 
+  ggplot() + 
+  geom_histogram(aes(size_estimate, fill = site), color = "black", binwidth = 50) +
+  facet_wrap(~site, nrow = 3, scales = "free_y")+
+  scale_fill_viridis(discrete = TRUE, option = "turbo") +
+  labs(title = "Size Distribution", y = "Count", x = "Length (mm)") + 
+  theme_bw() +
+  theme(legend.position = "top")
+```
+
+#### Behavior
+
+Do I need to expand for total fish?
+
+```{r fig.height = 6, fig.width = 8}
+#| label: fig-aris-fish-behavior
+#| fig-cap: "Fish Behavior Determined from ARIS"
+behavior <- aris_data |> 
+  select(site, date, obs_time, behavior, count) |> 
+  uncount(weight = count,.remove = FALSE) |> 
+  mutate(milling = if_else(grepl("milling", behavior),1, 0),
+         schooling = if_else(grepl("schooling", behavior), 1, 0),
+         directional = if_else(grepl("directional", behavior), 1, 0),
+         meandering = if_else(grepl("meandering", behavior), 1, 0)
+  ) |> 
+  select(site, date, obs_time, milling, schooling, directional, meandering) |> 
+  pivot_longer(cols = milling:meandering, names_to = "behavior", values_to = "behavior_count") |> 
+  group_by(date, site, behavior) |> 
+  summarize(total_count = sum(behavior_count)) |> 
+  ungroup()
+
+ggplot(behavior) + geom_col(aes(date, total_count, fill = behavior)) + facet_wrap(~site, nrow = 3) +
+  theme_bw()+
+  theme(legend.position = "top")+
+  scale_fill_viridis(discrete = TRUE)
+```
+
+```{r}
+#| label: fig-aris-fish-behavior-box
+#| fig-cap: "Fish Behavior Boxplot determined from ARIS"
+ggplot(behavior) + 
+  geom_boxplot(aes(site, total_count, fill = behavior), 
+               position = position_dodge()) +
+  scale_fill_viridis(discrete = TRUE)+
+  theme_bw()+
+  theme(legend.position = "top")
+```
+
+#### Shoreline Utilization (Occupancy)
+
+This will look like a boxplot of "fish seconds" per hour
+
+```{r}
+
+```
+
+Also a plot of fish group size by time in view
+
+```{r}
+
+```
+
+
+###  Potentially relate hydro/temp and daily passage data
+
+### Beach Seine
+
+We will not have this for the first report, right? 
+Could see if any relevant beach seine data available - not sure how far up Sac they go. 
+
+## Discussion
+
+## References
