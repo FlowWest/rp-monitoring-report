@@ -1,5 +1,5 @@
 ---
-title: "Sacramento Side Channel Monitoring Report: Willow Bend, Rancho Caleta, Wilsons Landing"
+title: "Sacramento Side Channel Monitoring Report: Wilson Landing, Indian Fishery, Willow Bend"
 format: html
 editor: visual
 execute:
@@ -21,9 +21,9 @@ library(here)
 
 ## Background
 
-- Rancho Caleta
-- Colusa Bend
-- RJ Ranch
+- Wilson Landing
+- Indian Fishery
+- Willow Bend
 
 ## Methods
 
@@ -31,11 +31,23 @@ library(here)
 
 Include photos and map here
 
+## Wilson Landing
+```{r}
+
+```
+
+## Indian Fishery
+
+
+## Willow Bend
+
+
+
 ### Monitoring Surveys
 
-Pre-restoration ARIS surveys occurred in April (Rancho Caleta and Willow Bend) and May (Wilsons Landing).
+Pre-restoration ARIS surveys occurred in April (Willow Bend) and May (Wilsons Landing).
 
-ARIS Surveys were conducted: April 8, April 13, April 28 for Rancho Caleta; April 9, April 15, April 29 for Willow Bend; May 1, May 4, May 8 for Wilsons Landing
+ARIS Surveys were conducted: April 9, April 15, April 29 for Willow Bend; May 1, May 4, May 8 for Wilsons Landing
 
 Surveys generally occurred from 7:00 or 8:00 until 15:00.
 
@@ -51,7 +63,7 @@ Surveys generally occurred from 7:00 or 8:00 until 15:00.
 
 ```{r echo = FALSE}
 aris_data <- read_excel("data-raw/Sacramento River ARIS Data_shared.xlsx",skip = 1) |> clean_names() |> 
-  mutate(date = ymd(date))
+  mutate(date = ymd(date)) |> filter(site!="Rancho Caleta")
 
 hourly_flow_colusa <- read_csv(here("data-raw", "hourly_flow_colusa.csv"))
 hourly_flow_HMC <- read_csv(here("data-raw", "hourly_discharge_HMC.csv"))
@@ -64,6 +76,17 @@ daily_temp <- bind_rows(temp_rdb, temp_wlk) |>
 turb_rdb <- read_csv(here("data-raw", "hourly_turb_rdb.csv"))
 ```
 
+```{r}
+# Field days/ discrete values
+dates <- aris_data |> 
+  mutate(temp_u = as.numeric(daily_average_temperature_upstream_f)) |> 
+  mutate(temp_d = as.numeric(daily_average_termperature_downstream_c)) |>  
+  mutate(turbidity = as.numeric(ntu)) |> 
+  select(date, site, flow_cfs, temp_u, temp_d, turbidity)  |> 
+  distinct() 
+```
+
+
 #### Hydrologic Data (Flow)
 
 These plots will more likely turn into a facet plot of 3 rows OR one plot per report with the appropriate flow station identified for each restoration site. Might also get rid of the points for the "before" if these are just from gauges and not actually collected at the site. Could just draw the full vertical line in that case for dates sampled. Same applies to WQ plots.
@@ -73,12 +96,6 @@ Do we have flow thresholds we care about here? E.g. goals for restoration projec
 ```{r}
 #| label: fig-flow-data
 #| fig-cap: "Hourly Continuous Flow Data and 'Discrete' Flow Data associated with dates of sample. Hamilton City - HMC (upstream) and USGS 11389500 - COL (downstream)"
-dates <- aris_data |> 
-  mutate(temp_u = as.numeric(daily_average_temperature_upstream_f)) |> 
-  mutate(temp_d = as.numeric(daily_average_termperature_downstream_c)) |>  
-  mutate(turbidity = as.numeric(ntu)) |> 
-  select(date, site, flow_cfs, temp_u, temp_d, turbidity)  |> 
-  distinct()
 
 ggplot() + 
   geom_line(data = hourly_flow, aes(datetime, flow_cfs, color = location)) +
@@ -138,7 +155,7 @@ Not sure why we care about the hourly counts
 
 ```{r}
 #| label: fig-aris-hourly-counts
-#| fig-cap: "Average Hourly Passage in April (Willow Bend, Rancho Coleta) and May (Wilsons Landing). Three days of sampling were conducted for each site."
+#| fig-cap: "Average Hourly Passage in April (Willow Bend) and May (Wilsons Landing). Three days of sampling were conducted for each site."
 
 aris_hourly_counts <- aris_data |> 
   group_by(site, date, hour, subsample_time_start) |> 
@@ -173,7 +190,7 @@ aris_hourly_counts |>
 
 ```{r}
 #| label: fig-aris-daily-passage
-#| fig-cap: "Average Daily Passage in April (Willow Bend, Rancho Caleta) and May (Wilsons Landing). Three days of sampling were conducted for each site."
+#| fig-cap: "Average Daily Passage in April (Willow Bend) and May (Wilsons Landing). Three days of sampling were conducted for each site."
 # This plot will probably look like one Before and one After per site with standard deviation once we have "After" data. 
 
 ggplot(aris_daily_counts) + 
